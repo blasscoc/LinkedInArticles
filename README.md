@@ -20,21 +20,24 @@ import matplotlib.pylab as plt
 # This is fast if you have GPU!
 from keras.layers import LSTM
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Input, Embedding, Dropout, Conv1D, MaxPooling1D, BatchNormalization
+from keras.layers import (Dense, Dropout, Input, Embedding, 
+                          Dropout, Conv1D, MaxPooling1D, 
+                          BatchNormalization)
 from keras.preprocessing import sequence
 from keras.optimizers import SGD, RMSprop
 from keras.initializers import Zeros
 
 from sklearn import svm
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import OneHotEncoder,LabelEncoder
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report
 from sklearn import preprocessing
 from sklearn.preprocessing import MinMaxScaler
 
 # Convenience method from the seminal work of https://github.com/brendonhall
-from competition_facies_plots import make_facies_log_plot, compare_facies_plot, facies_colors
+from competition_facies_plots import (make_facies_log_plot, 
+                                      compare_facies_plot, 
+                                      facies_colors)
 ```
 
     Using TensorFlow backend.
@@ -48,7 +51,8 @@ all_data = pd.read_csv("training_data.csv")
 # stuff not to normalize
 _not_keys = ['Facies', 'Formation', 'Well Name']
 # stuff to normalize
-_norm_keys = ['Depth', 'GR', 'ILD_log10', 'DeltaPHI', 'PHIND', 'PE', 'NM_M', 'RELPOS']
+_norm_keys = ['Depth', 'GR', 'ILD_log10', 'DeltaPHI', 
+              'PHIND', 'PE', 'NM_M', 'RELPOS']
 
 all_wells = {}
 for key, val in all_data.groupby("Well Name"):
@@ -62,11 +66,13 @@ Tell us about the scene; load the well-data into short snippets, and associate l
 def chunk(x, y, num_chunks, size=61, random=True):
     rng = x.shape[0] - size
     if random:
-        indx = np.int_(np.random.rand(num_chunks) * rng) + size//2
+        indx = np.int_(
+            np.random.rand(num_chunks) * rng) + size//2
     else:
         indx = np.arange(0,rng,1) + size//2
         
-    Xwords = np.array([[x[i-size//2:i+size//2+1,:] for i in indx]])
+    Xwords = np.array([[x[i-size//2:i+size//2+1,:] 
+                                for i in indx]])
     ylabel = np.array([y[i] for i in indx])
     return Xwords[0,...], ylabel
 ```
@@ -80,7 +86,8 @@ def _num_pad(size, batch_size):
 
 def setup_svc(blind_well='SHANKLE', 
               holdout_wells=["STUART", "CRAWFORD"],
-              wvars=['GR', 'DeltaPHI', 'PE', 'PHIND', 'ILD_log10', 'NM_M'],
+              wvars=['GR', 'DeltaPHI', 'PE', 'PHIND', 
+                     'ILD_log10', 'NM_M'],
               win=7):
         
     X_train = []
@@ -114,10 +121,12 @@ def setup_svc(blind_well='SHANKLE',
 def setup_lstm(batch_size,
                blind_well='SHANKLE', 
                holdout_wells=["STUART", "CRAWFORD"],
-               wvars=['GR', 'DeltaPHI', 'PE', 'PHIND', 'ILD_log10', 'NM_M'],
+               wvars=['GR', 'DeltaPHI', 'PE', 'PHIND', 
+                      'ILD_log10', 'NM_M'],
                win=7):
     
-    not_blind = all_data[all_data['Well Name'] != blind_well].copy()    
+    not_blind = all_data[
+            all_data['Well Name'] != blind_well].copy()    
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaler.fit(not_blind[_norm_keys])
     
@@ -128,12 +137,14 @@ def setup_lstm(batch_size,
         if key == blind_well or key in holdout_wells:
             continue
         val = val.copy()
-        val[_norm_keys] = scaler.transform(val[_norm_keys])    
+        val[_norm_keys] = scaler.transform(
+                                    val[_norm_keys])    
             
         _X = val[wvars].values
         _y = val['Facies'].values
 
-        __X, __y = chunk(_X, _y, 400, size=win, random=False)
+        __X, __y = chunk(_X, _y, 400, size=win, 
+                         random=False)
         X_train.extend(__X)
         y_train.extend(__y)
 
@@ -142,13 +153,16 @@ def setup_lstm(batch_size,
 
     # hot one encoding
     enc = OneHotEncoder(sparse=False, n_values=11)
-    y_train = enc.fit_transform(np.atleast_2d(y_train-1).T)
+    y_train = enc.fit_transform(
+                        np.atleast_2d(y_train-1).T)
     X_train = X_train.transpose(0,2,1)
 
     # pad to batch size    
     num_pad = _num_pad(X_train.shape[0], batch_size)
-    X_train = np.pad(X_train, ((0,num_pad),(0,0),(0,0)), mode='edge')
-    y_train = np.pad(y_train, ((0,num_pad), (0,0)), mode='edge')
+    X_train = np.pad(X_train, 
+                ((0,num_pad),(0,0),(0,0)), mode='edge')
+    y_train = np.pad(y_train, 
+                ((0,num_pad), (0,0)), mode='edge')
     
     if blind_well is not None:
         blind = all_wells[blind_well].copy()
@@ -158,7 +172,8 @@ def setup_lstm(batch_size,
         _X = blind[wvars].values
         _y = blind['Facies'].values
 
-        X_test, y_test = chunk(_X, _y, 400, size=win, random=False)
+        X_test, y_test = chunk(_X, _y, 400, size=win, 
+                               random=False)
 
         # hot one encoding
         enc = OneHotEncoder(sparse=False, n_values=11)
@@ -167,8 +182,10 @@ def setup_lstm(batch_size,
         
         # pad to batch size
         num_pad = _num_pad(X_test.shape[0], batch_size)
-        X_test = np.pad(X_test, ((0,num_pad),(0,0),(0,0)), mode='edge')
-        y_test  = np.pad(y_test, ((0,num_pad), (0,0)), mode='edge')
+        X_test = np.pad(X_test, 
+                        ((0,num_pad),(0,0),(0,0)), mode='edge')
+        y_test  = np.pad(y_test, 
+                         ((0,num_pad), (0,0)), mode='edge')
     else:
         X_test = None
         y_test = None
@@ -186,8 +203,9 @@ For comparison, the support vector classifier is also applied, with hyper-paramt
 
 
 ```python
-blind_wells = ['CHURCHMAN BIBLE', 'CROSS H CATTLE', 'LUKE G U', 'NEWBY', 
-               'NOLAN', 'Recruit F9', 'SHRIMPLIN', 'SHANKLE']
+blind_wells = ['CHURCHMAN BIBLE', 'CROSS H CATTLE', 'LUKE G U', 
+               'NEWBY', 'NOLAN', 'Recruit F9', 'SHRIMPLIN', 
+               'SHANKLE']
 wvars = ['GR', 'DeltaPHI', 'PE', 'PHIND', 'ILD_log10', 'NM_M']
 win = 7
 batch_size = 128
@@ -196,45 +214,57 @@ batch_size = 128
 for blind in blind_wells:  
     print (blind)
     
-    X_train, y_train, X_test, y_test = setup_lstm(batch_size, blind_well=blind)
+    X_train, y_train, X_test, y_test = setup_lstm(batch_size, 
+                                                  blind_well=blind)
     
     
     # burn-in a little
     lstm_model = Sequential()
-    lstm_model.add(LSTM(50,batch_input_shape=(batch_size, X_train.shape[1],X_train.shape[2]),
+    lstm_model.add(LSTM(50,batch_input_shape=(batch_size, 
+                                X_train.shape[1], X_train.shape[2]),
                    stateful=True, kernel_initializer=Zeros()))
     lstm_model.add(Dropout(0.1))
     lstm_model.add(Dense(11, activation='sigmoid'))
-    lstm_model.compile(loss='categorical_crossentropy', optimizer=RMSprop(), metrics=['accuracy'])    
-    history = lstm_model.fit(X_train,y_train,epochs=20, batch_size=batch_size, 
+    lstm_model.compile(loss='categorical_crossentropy', 
+                       optimizer=RMSprop(), metrics=['accuracy'])    
+    history = lstm_model.fit(X_train,y_train,epochs=20, 
+                             batch_size=batch_size, 
                         validation_data=(X_test, y_test),verbose=0)
     lstm_model.save_weights("tmp.h5")
     
     lstm_model = Sequential()
-    lstm_model.add(LSTM(50,batch_input_shape=(batch_size, X_train.shape[1],X_train.shape[2]),
+    lstm_model.add(LSTM(50,batch_input_shape=(batch_size, 
+                                X_train.shape[1],X_train.shape[2]),
                    stateful=True))
     lstm_model.add(Dropout(0.1))
     lstm_model.add(Dense(11, activation='sigmoid'))
-    lstm_model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])    
+    lstm_model.compile(loss='categorical_crossentropy', 
+                       optimizer='adam', metrics=['accuracy'])    
     lstm_model.load_weights("tmp.h5")
     
-    history = lstm_model.fit(X_train,y_train,epochs=80, batch_size=batch_size, verbose=0)
+    history = lstm_model.fit(X_train,y_train,epochs=80, 
+                             batch_size=batch_size, verbose=0)
     
     # Save our prediction
     prediction = lstm_model.predict(X_test, batch_size=batch_size)
     all_wells[blind]['PredictionLSTM'] = np.nan
     upper = all_wells[blind].shape[0] - win
     
-    all_wells[blind]['PredictionLSTM'][win//2:-win//2] = np.argmax(prediction[:upper], axis=1)+1
+    all_wells[blind]['PredictionLSTM'][win//2:-win//2] = \
+                            np.argmax(prediction[:upper], axis=1)+1
 
-    all_wells[blind]['PredictionLSTM'].fillna(method='bfill', inplace=True)
-    all_wells[blind]['PredictionLSTM'].fillna(method='ffill', inplace=True)   
+    all_wells[blind]['PredictionLSTM'].fillna(
+                                method='bfill', inplace=True)
+    all_wells[blind]['PredictionLSTM'].fillna(
+                                method='ffill', inplace=True)   
     
     
-    X_train, y_train, X_test, y_test = setup_svc(blind_well=blind)
+    X_train, y_train, X_test, y_test = \
+                                setup_svc(blind_well=blind)
     svc_model = svm.SVC(C=10, gamma=1)
     svc_model.fit(X_train,y_train)       
-    all_wells[blind]['PredictionSVC'] = svc_model.predict(X_test)
+    all_wells[blind]['PredictionSVC'] = \
+                                svc_model.predict(X_test)
     
 #print(classification_report(np.argmax(y_test,axis=1), np.argmax(model.predict(X_test),axis=1)))
 ```
@@ -259,17 +289,22 @@ for blind in blind_wells:
 
 
 ```python
-prediction_svc = np.hstack([all_wells[well]['PredictionSVC'].values for well in blind_wells])
-prediction_lstm = np.hstack([all_wells[well]['PredictionLSTM'].values for well in blind_wells])
-facies = np.hstack([all_wells[well]['Facies'].values for well in blind_wells])
+prediction_svc = np.hstack(
+    [all_wells[well]['PredictionSVC'].values for well in blind_wells])
+prediction_lstm = np.hstack(
+    [all_wells[well]['PredictionLSTM'].values for well in blind_wells])
+facies = np.hstack([
+    all_wells[well]['Facies'].values for well in blind_wells])
 
 print ("\n\nHold-one/Predict Cross-Validation performance\n\n")
 print(classification_report(prediction_svc, facies))
 print(classification_report(prediction_lstm, facies))
 
 print ("\n\nHold-one/Predict SHANKLE-Well example\n\n")
-print(classification_report(all_wells['SHANKLE']['PredictionSVC'], all_wells['SHANKLE']['Facies']))
-print(classification_report(all_wells['SHANKLE']['PredictionLSTM'], all_wells['SHANKLE']['Facies']))
+print(classification_report(all_wells['SHANKLE']['PredictionSVC'], 
+                            all_wells['SHANKLE']['Facies']))
+print(classification_report(all_wells['SHANKLE']['PredictionLSTM'], 
+                            all_wells['SHANKLE']['Facies']))
 ```
 
     
@@ -345,9 +380,11 @@ print(classification_report(all_wells['SHANKLE']['PredictionLSTM'], all_wells['S
 
 ```python
 import matplotlib.pylab as plt
-compare_facies_plot(all_wells['SHANKLE'], 'PredictionSVC', facies_colors)
+compare_facies_plot(all_wells['SHANKLE'], 
+                    'PredictionSVC', facies_colors)
 plt.show()
-compare_facies_plot(all_wells['SHANKLE'], 'PredictionLSTM', facies_colors)
+compare_facies_plot(all_wells['SHANKLE'], 
+                    'PredictionLSTM', facies_colors)
 plt.show()
 ```
 
