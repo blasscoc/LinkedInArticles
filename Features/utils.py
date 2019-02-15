@@ -63,6 +63,7 @@ def setup_svc(all_wells,
                      'ILD_log10', 'NM_M'],
               win=7):
 
+    print (wvars)
     X_train = []
     y_train = []
     for key,val in all_wells.items():
@@ -98,6 +99,8 @@ def setup_lstm(all_wells,
                wvars=['GR', 'DeltaPHI', 'PE', 'PHIND', 
                       'ILD_log10', 'NM_M'],
                win=7):
+
+    print (wvars)
 
     not_blind = np.vstack([
                    val[wvars].values for key,val in all_wells.items() if
@@ -152,7 +155,7 @@ def setup_lstm(all_wells,
         # hot one encoding
         enc = OneHotEncoder(sparse=False, n_values=11)
         y_test = enc.fit_transform(np.atleast_2d(y_test-1).T)
-        X_test = X_test.transpose(0,2,1)
+        X_test = X_test.transpose(0,1,2)
         
         # pad to batch size
         num_pad = _num_pad(X_test.shape[0], batch_size)
@@ -182,29 +185,13 @@ def train_predict_lstm(all_wells,
 
     # Well-fold X-validation
     for blind in blind_wells:  
-    
+        print (blind)
+
         X_train, y_train, X_test, y_test = setup_lstm(all_wells,
                                                       batch_size,
                                                       wvars=wvars,
                                                       blind_well=blind)
     
-
-        """
-        # burn-in a little
-        lstm_model = Sequential()
-        lstm_model.add(LSTM(num_hidden,batch_input_shape=(batch_size, 
-                        X_train.shape[1], X_train.shape[2]),
-                        stateful=True, kernel_initializer=Zeros()))
-        lstm_model.add(Dropout(dropout))
-        lstm_model.add(Dense(num_classes, activation='sigmoid'))
-        lstm_model.compile(loss='categorical_crossentropy', 
-                           optimizer=RMSprop(), metrics=['accuracy'])    
-        history = lstm_model.fit(X_train,y_train,epochs=20, 
-                                 batch_size=batch_size, 
-                                 validation_data=(X_test, y_test),verbose=0)
-        lstm_model.save_weights("tmp.h5")
-        """
-        
         lstm_model = Sequential()
         lstm_model.add(LSTM(num_hidden,batch_input_shape=(batch_size, 
                         X_train.shape[1],X_train.shape[2]),

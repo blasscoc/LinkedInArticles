@@ -57,7 +57,6 @@ def adaptive_choice_P(sigma, eps=1e-7):
         [0, 1[. The value of P will lead to the use of the frequency
         interval [1-P, P[, so that there are 2*P - 1 periods.
     """
-    print ("HERE")
     val = math.sqrt(-2 * (sigma**2) * math.log(eps))
     P = int(math.ceil(val + 1))
     return P
