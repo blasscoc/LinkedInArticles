@@ -149,6 +149,8 @@ def setup_lstm(all_wells,
     -------
     Test/train split 
     """
+
+    print ("Variables used : ", wvars)
     
     not_blind = np.vstack([
                    val[wvars].values for key,val in all_wells.items() if
